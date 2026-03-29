@@ -1,4 +1,5 @@
 import pytest
+import json
 
 from nucleo_crypto.almacenamiento import local
 
@@ -23,9 +24,12 @@ def test_falla_si_checksum_no_coincide(tmp_path):
     ruta = tmp_path / "identidad.enc"
     local.guardarIdentidad({"peerId": "abc"}, "clave-segura", ruta=ruta)
 
-    contenido = ruta.read_text(encoding="utf-8")
-    contenidoAlterado = contenido.replace("A", "B", 1)
-    ruta.write_text(contenidoAlterado, encoding="utf-8")
+    estructura = json.loads(ruta.read_text(encoding="utf-8"))
+    checksumOriginal = estructura["checksum_b64"]
+    estructura["checksum_b64"] = (
+        ("A" if checksumOriginal[0] != "A" else "B") + checksumOriginal[1:]
+    )
+    ruta.write_text(json.dumps(estructura), encoding="utf-8")
 
     with pytest.raises(Exception):
         local.cargarIdentidad("clave-segura", ruta=ruta)
