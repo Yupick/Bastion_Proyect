@@ -1,0 +1,12 @@
+{
+  "usuario": {
+    "clave_kyber": "privada",
+    "clave_dilithium": "privada",
+    "clave_publica_dilithium": "publica",
+    "alias": {
+      "nombre": "Juan123",
+      "firma": "firma_digital",
+      "estado": "activo"
+    }
+  }
+}

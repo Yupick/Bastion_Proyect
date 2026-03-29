@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Node / Web
+node_modules/
+dist/
+build/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Rust / Tauri
+target/
+Cargo.lock
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Entorno y secretos
+.env
+.env.*
+*.pem
+*.key
+
+# Logs
+logs/
+*.log

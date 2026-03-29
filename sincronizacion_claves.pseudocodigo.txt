@@ -1,0 +1,7 @@
+Inicio
+→ Exportar claves cifradas con AES-256 + PBKDF2
+→ Guardar archivo .pqcbackup
+→ Importar en nuevo dispositivo
+→ Validar checksum y firma
+→ Restaurar claves si válidas
+Fin

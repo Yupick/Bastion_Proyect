@@ -1,0 +1,7 @@
+Inicio
+→ Generar nuevas claves
+→ Firmar mensaje de revocación con clave anterior
+→ Enviar aviso cifrado a contactos
+→ Contactos verifican nueva clave
+→ Actualizar lista local
+Fin

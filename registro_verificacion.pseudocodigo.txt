@@ -1,0 +1,9 @@
+Inicio
+→ Generar claves Kyber y Dilithium
+→ Elegir alias (opcional)
+→ Firmar alias con clave Dilithium
+→ Compartir clave pública por QR/código
+→ Escanear clave pública de contacto
+→ Verificar firma de mensaje recibido
+→ Agregar contacto si verificado
+Fin
