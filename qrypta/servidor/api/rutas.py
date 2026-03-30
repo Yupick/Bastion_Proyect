@@ -17,6 +17,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 # Importar y montar el router de DHT
 from .dht_api import router as dht_router
 from .push_api import router as push_router
+from .grupos_api import router as grupos_router
 
 from servidor.api.modelos import MensajeEntrada, MensajeSalida, RespuestaEstado, RespuestaOk
 from servidor.auditoria.logger import auditor
@@ -25,6 +26,7 @@ from servidor.config.settings import settings
 router = APIRouter()
 router.include_router(dht_router)
 router.include_router(push_router)
+router.include_router(grupos_router)
 
 _mensajesPendientes: dict[str, deque[MensajeSalida]] = {}
 _historialRequestsPorIp: dict[str, deque[datetime]] = {}
