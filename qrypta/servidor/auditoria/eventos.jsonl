@@ -1,0 +1,5 @@
+{"tipo": "INFO", "timestamp": "2026-03-29T12:00:00Z", "detalle": "Servidor iniciado correctamente."}
+{"tipo": "EXITO", "timestamp": "2026-03-29T12:01:10Z", "detalle": "Usuario alice registrado."}
+{"tipo": "ADVERTENCIA", "timestamp": "2026-03-29T12:02:30Z", "detalle": "Intento de login fallido para usuario bob."}
+{"tipo": "ERROR", "timestamp": "2026-03-29T12:03:45Z", "detalle": "Error de conexión con base de datos."}
+{"tipo": "INFO", "timestamp": "2026-03-29T12:04:00Z", "detalle": "Backup realizado exitosamente."}

@@ -1,0 +1,11 @@
+{% for evento in eventos %}
+<div class="bg-white rounded shadow mb-2 p-4 flex items-center border-l-4 {{ evento.color }}">
+    <div class="flex-1">
+        <div class="font-semibold text-[#1e293b]">{{ evento.tipo }}</div>
+        <div class="text-xs text-[#64748b]">{{ evento.timestamp }}</div>
+        <div class="text-sm text-gray-700 mt-1">{{ evento.detalle }}</div>
+    </div>
+</div>
+{% else %}
+<div class="text-gray-400 text-center py-8">No hay eventos recientes.</div>
+{% endfor %}
