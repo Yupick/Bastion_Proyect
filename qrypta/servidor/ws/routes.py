@@ -33,9 +33,12 @@ _conexionesActivas: dict[str, WebSocket] = {}
 # Estructura: {peer_id: ultimo_heartbeat_timestamp}
 _ultimoHeartbeat: dict[str, float] = {}
 
-# Cola de mensajes pendientes para peers no conectados
-# Estructura: {peer_id: [mensajes]}
-_colaMensajes: dict[str, list[dict[str, Any]]] = defaultdict(list)
+# Persistencia de mensajes pendientes (DB)
+from servidor.persistencia.mensajes import (
+    MensajePendiente, guardar_mensaje, obtener_mensajes, eliminar_mensajes, limpiar_expirados, init_db
+)
+
+# _colaMensajes: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
 UPLOAD_DIR = Path(__file__).parent.parent / "archivos_uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -114,44 +117,32 @@ async def _enviar_mensaje_tiempo_real(peer_id_destino: str, mensaje: dict[str, A
 
 
 async def _encolar_mensaje(peer_id_destino: str, mensaje: dict[str, Any]) -> None:
-	"""Encola mensaje para entrega posterior cuando el peer se conecte.
-	
-	Args:
-		peer_id_destino: ID del peer destino
-		mensaje: Mensaje a encolar
-	"""
-	cola = _colaMensajes[peer_id_destino]
-	
-	# Limitar tamano de cola
-	if len(cola) >= MAX_MENSAJES_COLA:
-		cola.pop(0)  # FIFO
-	
-	cola.append(mensaje)
-	auditor.registrarEvento("ws_mensaje_encolado", len(json.dumps(mensaje)), True)
+    """Encola mensaje para entrega posterior cuando el peer se conecte (persistente)."""
+    # Limitar tamaño de mensajes por peer
+    mensajes = obtener_mensajes(peer_id_destino)
+    if len(mensajes) >= MAX_MENSAJES_COLA:
+        # Eliminar el más antiguo
+        eliminar_mensajes(peer_id_destino)
+    # Guardar mensaje
+    guardar_mensaje(MensajePendiente(peer_id_destino, json.dumps(mensaje), time.time()))
+    auditor.registrarEvento("ws_mensaje_encolado", len(json.dumps(mensaje)), True)
 
 
 async def _entregar_mensajes_pendientes(peer_id: str, websocket: WebSocket) -> None:
-	"""Entrega mensajes pendientes a un peer recien conectado.
-	
-	Args:
-		peer_id: ID del peer
-		websocket: Conexion WebSocket del peer
-	"""
-	mensajes = _colaMensajes.get(peer_id, [])
-	
-	if not mensajes:
-		return
-	
-	for mensaje in mensajes:
-		try:
-			await websocket.send_json(mensaje)
-		except Exception:
-			# Si falla, dejar mensajes en cola
-			break
-	else:
-		# Todos entregados exitosamente
-		_colaMensajes.pop(peer_id, None)
-		auditor.registrarEvento("ws_mensajes_pendientes_entregados", len(mensajes), True)
+    """Entrega mensajes pendientes a un peer recien conectado (desde DB)."""
+    mensajes = obtener_mensajes(peer_id)
+    if not mensajes:
+        return
+    for mensaje in mensajes:
+        try:
+            await websocket.send_json(json.loads(mensaje.payload))
+        except Exception:
+            # Si falla, dejar mensajes en DB
+            break
+    else:
+        # Todos entregados exitosamente
+        eliminar_mensajes(peer_id)
+        auditor.registrarEvento("ws_mensajes_pendientes_entregados", len(mensajes), True)
 
 
 async def _heartbeat_monitor() -> None:
@@ -181,8 +172,9 @@ async def _heartbeat_monitor() -> None:
 
 @router.on_event("startup")
 async def startup_event() -> None:
-	"""Inicia monitor de heartbeat."""
-	asyncio.create_task(_heartbeat_monitor())
+    """Inicia monitor de heartbeat y base de datos."""
+    init_db()
+    asyncio.create_task(_heartbeat_monitor())
 
 
 @router.websocket("/ws/v1/connect/{peer_id}")
@@ -281,13 +273,20 @@ async def ws_connect(websocket: WebSocket, peer_id: str) -> None:
 
 @router.get("/ws/v1/stats")
 async def ws_stats() -> dict[str, Any]:
-	"""Devuelve estadisticas de conexiones WebSocket."""
-	return {
-		"conexiones_activas": len(_conexionesActivas),
-		"peers_conectados": list(_conexionesActivas.keys()),
-		"mensajes_en_cola": sum(len(msgs) for msgs in _colaMensajes.values()),
-		"peers_con_mensajes_pendientes": len(_colaMensajes),
-	}
+    """Devuelve estadisticas de conexiones WebSocket y mensajes pendientes."""
+    # Contar mensajes pendientes en DB
+    import sqlite3
+    conn = sqlite3.connect("servidor_mensajes.db")
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*), COUNT(DISTINCT peer_id) FROM mensajes_pendientes")
+    total, peers = c.fetchone()
+    conn.close()
+    return {
+        "conexiones_activas": len(_conexionesActivas),
+        "peers_conectados": list(_conexionesActivas.keys()),
+        "mensajes_en_cola": total,
+        "peers_con_mensajes_pendientes": peers,
+    }
 
 
 # === Endpoints de archivos ===

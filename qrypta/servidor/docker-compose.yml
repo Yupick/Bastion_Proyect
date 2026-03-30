@@ -7,3 +7,21 @@ services:
       - "8000:8000"
     env_file:
       - .env.example
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: qrypta
+      POSTGRES_PASSWORD: qrypta
+      POSTGRES_DB: qrypta_mensajes
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+
