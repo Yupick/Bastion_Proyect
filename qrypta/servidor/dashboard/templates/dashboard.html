@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Bastion{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+        <div class="text-blue-700 text-4xl mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m4 4h-1v-4h-1m-4 4h-1v-4h-1" /></svg></div>
+        <div class="font-semibold text-lg">Auditoría reciente</div>
+        <div class="mt-2 text-gray-500 text-sm">Ver los últimos eventos registrados</div>
+        <a href="/dashboard/auditoria" class="mt-4 px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 transition">Ver auditoría</a>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+        <div class="text-green-700 text-4xl mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg></div>
+        <div class="font-semibold text-lg">Estado del servidor</div>
+        <div class="mt-2 text-gray-500 text-sm">Ver estado y métricas en tiempo real</div>
+        <a href="/dashboard/estado" class="mt-4 px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800 transition">Ver estado</a>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+        <div class="text-yellow-600 text-4xl mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m4 4h-1v-4h-1m-4 4h-1v-4h-1" /></svg></div>
+        <div class="font-semibold text-lg">Configuración</div>
+        <div class="mt-2 text-gray-500 text-sm">Editar parámetros y variables</div>
+        <a href="/dashboard/config" class="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition">Configurar</a>
+    </div>
+</div>
+{% endblock %}

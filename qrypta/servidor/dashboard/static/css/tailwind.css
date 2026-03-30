@@ -1,0 +1,2 @@
+/* TailwindCSS CDN para prototipo rápido. Si se desea build local, reemplazar por build propio. */
+@import url('https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css');

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Auditoría | Qrypta{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-[#1e293b] mb-6">Auditoría reciente</h1>
+<div id="audit-log" hx-get="/v1/admin/audit/reciente" hx-trigger="load, every 10s" hx-swap="innerHTML">
+    <div class="text-gray-500">Cargando eventos...</div>
+</div>
+{% endblock %}
