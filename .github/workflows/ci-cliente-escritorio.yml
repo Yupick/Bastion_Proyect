@@ -1,0 +1,35 @@
+name: CI Cliente Escritorio
+
+on:
+  push:
+    paths:
+      - 'qrypta/cliente_escritorio/**'
+      - '.github/workflows/ci-cliente-escritorio.yml'
+  pull_request:
+    paths:
+      - 'qrypta/cliente_escritorio/**'
+      - '.github/workflows/ci-cliente-escritorio.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qrypta/cliente_escritorio
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: qrypta/cliente_escritorio/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build

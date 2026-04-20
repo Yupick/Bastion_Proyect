@@ -1,6 +1,4 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 class IncomingApiMessage {
   const IncomingApiMessage({
@@ -17,9 +15,18 @@ class IncomingApiMessage {
 }
 
 class MessageApiService {
-  MessageApiService({http.Client? client}) : _client = client ?? http.Client();
+  MessageApiService({Dio? client}) : _client = client ?? Dio() {
+    _client.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          options.headers['Content-Type'] = 'application/json';
+          handler.next(options);
+        },
+      ),
+    );
+  }
 
-  final http.Client _client;
+  final Dio _client;
 
   Future<void> sendMessage({
     required String serverBaseUrl,
@@ -29,19 +36,18 @@ class MessageApiService {
     required String firmaB64,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/mensaje');
-    final response = await _client.post(
+    final response = await _client.postUri(
       uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+      data: <String, dynamic>{
         'peerIdOrigen': peerIdOrigen,
         'peerIdDestino': peerIdDestino,
         'payloadCifradoB64': payloadCifradoB64,
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'firmaB64': firmaB64,
-      }),
+      },
     );
 
-    if (response.statusCode >= 400) {
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error enviando mensaje (${response.statusCode})');
     }
   }
@@ -51,13 +57,12 @@ class MessageApiService {
     required String peerId,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/mensajes/$peerId');
-    final response = await _client.get(uri);
-    if (response.statusCode >= 400) {
+    final response = await _client.getUri(uri);
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error consultando mensajes (${response.statusCode})');
     }
 
-    final data = (jsonDecode(response.body) as List<dynamic>)
-        .cast<Map<String, dynamic>>();
+    final data = (response.data as List<dynamic>).cast<Map<String, dynamic>>();
 
     return data
         .map(
@@ -79,17 +84,16 @@ class MessageApiService {
     required String groupKey,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/grupos/crear');
-    final response = await _client.post(
+    final response = await _client.postUri(
       uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+      data: <String, dynamic>{
         'grupo_id': groupId,
         'admin': adminPeerId,
         'miembros': members,
         'clave_grupo': groupKey,
-      }),
+      },
     );
-    if (response.statusCode >= 400) {
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error creando grupo (${response.statusCode})');
     }
   }
@@ -101,16 +105,15 @@ class MessageApiService {
     required String encryptedPayload,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/grupos/mensaje');
-    final response = await _client.post(
+    final response = await _client.postUri(
       uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+      data: <String, dynamic>{
         'grupo_id': groupId,
         'remitente': senderPeerId,
         'payload_cifrado': encryptedPayload,
-      }),
+      },
     );
-    if (response.statusCode >= 400) {
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error enviando mensaje de grupo (${response.statusCode})');
     }
   }
@@ -120,11 +123,11 @@ class MessageApiService {
     required String groupId,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/grupos/$groupId/mensajes');
-    final response = await _client.get(uri);
-    if (response.statusCode >= 400) {
+    final response = await _client.getUri(uri);
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error leyendo grupo (${response.statusCode})');
     }
-    return (jsonDecode(response.body) as List<dynamic>).cast<Map<String, dynamic>>();
+    return (response.data as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
   Future<void> updatePresence({
@@ -133,8 +136,8 @@ class MessageApiService {
     required bool online,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/presencia/actualizar/$peerId?online=$online');
-    final response = await _client.post(uri);
-    if (response.statusCode >= 400) {
+    final response = await _client.postUri(uri);
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error actualizando presencia (${response.statusCode})');
     }
   }
@@ -144,11 +147,11 @@ class MessageApiService {
     required String peerId,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/presencia/$peerId');
-    final response = await _client.get(uri);
-    if (response.statusCode >= 400) {
+    final response = await _client.getUri(uri);
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error consultando presencia (${response.statusCode})');
     }
-    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    final map = response.data as Map<String, dynamic>;
     return map['online'] as bool? ?? false;
   }
 
@@ -158,12 +161,11 @@ class MessageApiService {
     required String token,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/push/registrar');
-    final response = await _client.post(
+    final response = await _client.postUri(
       uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'peer_id': peerId, 'token_push': token}),
+      data: <String, dynamic>{'peer_id': peerId, 'token_push': token},
     );
-    if (response.statusCode >= 400) {
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error registrando push (${response.statusCode})');
     }
   }
@@ -173,12 +175,11 @@ class MessageApiService {
     required String peerId,
   }) async {
     final uri = Uri.parse('$serverBaseUrl/v1/push/baja');
-    final response = await _client.post(
+    final response = await _client.postUri(
       uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'peer_id': peerId}),
+      data: <String, dynamic>{'peer_id': peerId},
     );
-    if (response.statusCode >= 400) {
+    if ((response.statusCode ?? 500) >= 400) {
       throw Exception('Error dando de baja push (${response.statusCode})');
     }
   }

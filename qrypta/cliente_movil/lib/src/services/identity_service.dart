@@ -56,6 +56,40 @@ class IdentityService {
     return identity;
   }
 
+  Future<String> exportPrivateKeyPkcs8Encrypted({
+    required LocalIdentity identity,
+    required String passphrase,
+  }) async {
+    if (passphrase.trim().length < 8) {
+      throw Exception('Passphrase demasiado corta para exportar clave privada');
+    }
+
+    final clearPkcs8 = utf8.encode(
+      'PKCS8:${identity.peerId}:${identity.privateKeyB64}',
+    );
+    final digest = await Sha256().hash(utf8.encode('qrypta-pkcs8:$passphrase'));
+    final secret = SecretKey(digest.bytes);
+    final nonce = Uint8List.fromList(digest.bytes.take(12).toList(growable: false));
+
+    final box = await AesGcm.with256bits().encrypt(
+      clearPkcs8,
+      secretKey: secret,
+      nonce: nonce,
+    );
+
+    return base64Encode(
+      utf8.encode(
+        jsonEncode(<String, String>{
+          'format': 'pkcs8-encrypted',
+          'alg': 'aes-256-gcm',
+          'nonce': base64Encode(box.nonce),
+          'cipher': base64Encode(box.cipherText),
+          'mac': base64Encode(box.mac.bytes),
+        }),
+      ),
+    );
+  }
+
   Uint8List _deriveSeed(Uint8List input) {
     final seed = Uint8List(32);
     for (var i = 0; i < seed.length; i++) {
