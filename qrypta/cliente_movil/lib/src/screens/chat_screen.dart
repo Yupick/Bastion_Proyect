@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:qrypta_cliente_flutter/config/app_config.dart';
 import 'package:qrypta_cliente_flutter/src/models/chat_message.dart';
 import 'package:qrypta_cliente_flutter/src/models/identity.dart';
+import 'package:qrypta_cliente_flutter/src/screens/contacts_screen.dart';
+import 'package:qrypta_cliente_flutter/src/screens/login_screen.dart';
+import 'package:qrypta_cliente_flutter/src/screens/recovery_backup_screen.dart';
+import 'package:qrypta_cliente_flutter/src/screens/settings_screen.dart';
 import 'package:qrypta_cliente_flutter/src/services/backup_service.dart';
 import 'package:qrypta_cliente_flutter/src/services/e2e_service.dart';
+import 'package:qrypta_cliente_flutter/src/services/identity_service.dart';
 import 'package:qrypta_cliente_flutter/src/services/local_identity_store.dart';
 import 'package:qrypta_cliente_flutter/src/services/message_api_service.dart';
+import 'package:qrypta_cliente_flutter/src/services/message_cache_service.dart';
+import 'package:qrypta_cliente_flutter/src/services/realtime_sync_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
@@ -21,7 +29,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _serverCtrl = TextEditingController(text: 'http://127.0.0.1:8000');
+  final TextEditingController _serverCtrl = TextEditingController(text: AppConfig.defaultApiBaseUrl);
   final TextEditingController _peerCtrl = TextEditingController();
   final TextEditingController _msgCtrl = TextEditingController();
   final TextEditingController _presencePeerCtrl = TextEditingController();
@@ -38,11 +46,62 @@ class _ChatScreenState extends State<ChatScreen> {
   final E2eService _e2e = E2eService();
   final LocalIdentityStore _store = LocalIdentityStore();
   final BackupService _backupService = BackupService();
+  final MessageCacheService _cache = MessageCacheService();
+  final RealtimeSyncService _realtime = RealtimeSyncService();
 
   final List<ChatMessage> _messages = <ChatMessage>[];
   final List<String> _groupMessages = <String>[];
   bool _busy = false;
   String? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCachedMessages();
+    _connectRealtime();
+  }
+
+  @override
+  void dispose() {
+    _realtime.disconnect();
+    super.dispose();
+  }
+
+  Future<void> _loadCachedMessages() async {
+    final cached = await _cache.recent(limit: 25);
+    if (!mounted || cached.isEmpty) {
+      return;
+    }
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(cached);
+    });
+  }
+
+  void _connectRealtime() {
+    _realtime
+        .connect(
+          wsUrl:
+              '${_serverCtrl.text.trim().replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://')}/ws',
+          peerId: widget.identity.peerId,
+        )
+        .listen((event) {
+      if (!mounted) {
+        return;
+      }
+
+      final raw = event['raw']?.toString();
+      final error = event['error']?.toString();
+      if (error != null) {
+        setState(() => _status = error);
+        return;
+      }
+      if (raw != null) {
+        setState(() => _status = 'Realtime: $raw');
+      }
+    });
+  }
 
   Future<void> _send() async {
     final destination = _peerCtrl.text.trim();
@@ -72,16 +131,16 @@ class _ChatScreenState extends State<ChatScreen> {
         firmaB64: envelope.$2,
       );
 
+      final sent = ChatMessage(
+        from: widget.identity.peerId,
+        body: message,
+        timestamp: DateTime.now(),
+        incoming: false,
+      );
+      await _cache.insert(sent);
+
       setState(() {
-        _messages.insert(
-          0,
-          ChatMessage(
-            from: widget.identity.peerId,
-            body: message,
-            timestamp: DateTime.now(),
-            incoming: false,
-          ),
-        );
+        _messages.insert(0, sent);
         _msgCtrl.clear();
         _status = 'Mensaje enviado';
       });
@@ -111,15 +170,14 @@ class _ChatScreenState extends State<ChatScreen> {
           peerIdOrigen: item.peerIdOrigen,
         );
 
-        _messages.insert(
-          0,
-          ChatMessage(
-            from: decrypted.senderPeerId,
-            body: decrypted.message,
-            timestamp: item.timestamp,
-            incoming: true,
-          ),
+        final msg = ChatMessage(
+          from: decrypted.senderPeerId,
+          body: decrypted.message,
+          timestamp: item.timestamp,
+          incoming: true,
         );
+        await _cache.insert(msg);
+        _messages.insert(0, msg);
       }
 
       setState(() => _status = 'Sincronizado: ${incoming.length} mensaje(s)');
@@ -339,6 +397,44 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: _busy ? null : _sync,
             icon: const Icon(Icons.sync),
             tooltip: 'Sincronizar',
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'contactos') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ContactsScreen(
+                      contacts: _messages.map((e) => e.from).toSet().toList(growable: false),
+                    ),
+                  ),
+                );
+              } else if (value == 'ajustes') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              } else if (value == 'backup') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RecoveryBackupScreen(
+                      backupService: _backupService,
+                      identityStore: _store,
+                    ),
+                  ),
+                );
+              } else if (value == 'login') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => LoginScreen(identityService: IdentityService()),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'contactos', child: Text('Contactos')),
+              PopupMenuItem(value: 'ajustes', child: Text('Ajustes')),
+              PopupMenuItem(value: 'backup', child: Text('Recuperar backup')),
+              PopupMenuItem(value: 'login', child: Text('Login local')),
+            ],
           ),
           IconButton(
             onPressed: _busy ? null : _resetIdentity,

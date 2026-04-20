@@ -1,0 +1,384 @@
+.app-shell {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  min-height: calc(100vh - 36px);
+  display: grid;
+  grid-template-columns: 280px 1fr 330px;
+  gap: 16px;
+}
+
+.sidebar,
+.conversation-panel,
+.contactos-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+
+.sidebar {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.brand-block h1 {
+  font-size: 1.55rem;
+}
+
+.subtle {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.menu {
+  display: grid;
+  gap: 10px;
+}
+
+.menu-item {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.menu-item.active,
+.menu-item:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.status-card {
+  margin-top: auto;
+  border-radius: 14px;
+  padding: 14px;
+  background: linear-gradient(145deg, #08302f, #0f766e);
+  color: #f4fcfb;
+}
+
+.status-card strong {
+  display: block;
+  margin: 6px 0;
+}
+
+.status-card small {
+  color: #d4f5ef;
+  display: block;
+  margin-top: 4px;
+}
+
+.install-btn {
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f4fcfb;
+  padding: 7px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.conversation-panel {
+  padding: 18px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-header h2 {
+  font-size: 1.45rem;
+}
+
+.pill {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  background: #dafbe8;
+  color: #0b6d46;
+  font-weight: 700;
+}
+
+.pill-off {
+  background: #e8ecf1;
+  color: #475569;
+}
+
+.mensajes {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #f8fcf8, #edf5ef);
+}
+
+.mensaje {
+  max-width: 76%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  display: grid;
+  gap: 5px;
+}
+
+.mensaje small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.mensaje.recibido {
+  background: #ffffff;
+  border: 1px solid #dbe7df;
+}
+
+.mensaje.enviado {
+  margin-left: auto;
+  background: #d7f3ef;
+  border: 1px solid #9ddfd5;
+}
+
+.composer {
+  display: grid;
+  gap: 8px;
+}
+
+.composer textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  padding: 11px 14px;
+  font: inherit;
+  min-height: 72px;
+  resize: vertical;
+}
+
+.composer button,
+.attachment-btn,
+.file-btn {
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.composer button:disabled,
+.attachment-btn:disabled,
+.file-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.composer-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.emoji-row {
+  display: flex;
+  gap: 6px;
+}
+
+.emoji-row button {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1f7a8c;
+}
+
+.file-btn input {
+  display: none;
+}
+
+.attachment-btn {
+  width: fit-content;
+  background: #155e75;
+  font-size: 0.78rem;
+  padding: 6px 10px;
+}
+
+.typing,
+.file-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.delivery-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.delivery-list li {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 7px 9px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.config-card {
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  padding: 12px;
+  background: #f8fafb;
+  display: grid;
+  gap: 10px;
+}
+
+.config-card label {
+  display: grid;
+  gap: 5px;
+  font-weight: 600;
+}
+
+.config-card input[type='text'],
+.config-card input:not([type]) {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 8px;
+}
+
+.inline-check {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500 !important;
+}
+
+.contactos-panel {
+  padding: 16px;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.panel-title small {
+  color: var(--muted);
+}
+
+.contactos-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.contacto {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 10px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.contacto.seleccionado,
+.contacto:hover {
+  border-color: var(--primary);
+  background: var(--surface-alt);
+}
+
+.contacto p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.dot-online {
+  color: var(--ok);
+}
+
+.dot-offline {
+  color: #64748b;
+}
+
+.meta em {
+  font-style: normal;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 999px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 1180px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .sidebar {
+    order: 2;
+  }
+
+  .conversation-panel {
+    order: 1;
+    min-height: 460px;
+  }
+
+  .contactos-panel {
+    order: 3;
+  }
+}

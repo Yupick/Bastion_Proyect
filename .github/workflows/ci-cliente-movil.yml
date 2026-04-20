@@ -1,0 +1,72 @@
+name: CI Cliente Movil
+
+on:
+  push:
+    paths:
+      - 'qrypta/cliente_movil/**'
+      - '.github/workflows/ci-cliente-movil.yml'
+  pull_request:
+    paths:
+      - 'qrypta/cliente_movil/**'
+      - '.github/workflows/ci-cliente-movil.yml'
+
+jobs:
+  flutter-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qrypta/cliente_movil
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze
+
+      - name: Flutter test
+        run: flutter test
+
+  android-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qrypta/cliente_movil
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build Android APK (debug)
+        run: flutter build apk --debug
+
+  ios-build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: qrypta/cliente_movil
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build iOS without codesign
+        run: flutter build ios --no-codesign

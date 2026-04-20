@@ -20,6 +20,114 @@ from textual.widgets import Footer, Header, Input, Static
 
 from servidor.config.settings import settings
 
+# ---------------------------------------------------------------------------
+# Gestión de usuarios baneados (AdminTUI.2)
+# ---------------------------------------------------------------------------
+
+_USUARIOS_FILE = Path(__file__).resolve().parents[1] / "admin_consola" / "usuarios_ban.json"
+
+
+def _cargarUsuarios() -> dict[str, dict]:
+	"""Carga el registro de usuarios desde JSON persistente."""
+	if not _USUARIOS_FILE.exists():
+		return {}
+	try:
+		return json.loads(_USUARIOS_FILE.read_text(encoding="utf-8"))
+	except (json.JSONDecodeError, OSError):
+		return {}
+
+
+def _guardarUsuarios(datos: dict[str, dict]) -> None:
+	"""Guarda el registro de usuarios en el archivo JSON."""
+	_USUARIOS_FILE.parent.mkdir(parents=True, exist_ok=True)
+	_USUARIOS_FILE.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def listarUsuarios() -> list[dict]:
+	"""Devuelve la lista de usuarios registrados."""
+	return list(_cargarUsuarios().values())
+
+
+def banearUsuario(userId: str, motivo: str = "ban manual") -> bool:
+	"""Marca un usuario como baneado. Devuelve True si el cambio fue aplicado."""
+	if not userId.strip():
+		return False
+	datos = _cargarUsuarios()
+	datos[userId] = {"id": userId, "estado": "baneado", "motivo": motivo}
+	_guardarUsuarios(datos)
+	return True
+
+
+def desbanearUsuario(userId: str) -> bool:
+	"""Elimina el ban de un usuario. Devuelve True si estaba baneado."""
+	datos = _cargarUsuarios()
+	if userId not in datos:
+		return False
+	del datos[userId]
+	_guardarUsuarios(datos)
+	return True
+
+
+# ---------------------------------------------------------------------------
+# SQL Browser seguro (AdminTUI.3)
+# ---------------------------------------------------------------------------
+
+import csv
+import io
+import sqlite3
+
+_DEFAULT_DB = Path(__file__).resolve().parents[1] / "servidor_mensajes.db"
+_MAX_FILAS_SQL = 50
+
+
+def _abrirDb(db_path: Path | None = None) -> sqlite3.Connection:
+	ruta = db_path or _DEFAULT_DB
+	if not ruta.exists():
+		raise FileNotFoundError(f"Base de datos no encontrada: {ruta}")
+	return sqlite3.connect(str(ruta))
+
+
+def listarTablas(db_path: Path | None = None) -> list[str]:
+	"""Devuelve los nombres de todas las tablas en la base de datos SQLite."""
+	with _abrirDb(db_path) as conn:
+		cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+		return [row[0] for row in cur.fetchall()]
+
+
+def ejecutarSelectSeguro(query: str, db_path: Path | None = None) -> tuple[list[str], list[tuple]]:
+	"""Ejecuta una consulta SELECT segura. Lanza ValueError si no es SELECT."""
+	q = query.strip()
+	if not q.upper().startswith("SELECT"):
+		raise ValueError("Solo se permiten consultas SELECT en el SQL browser")
+	with _abrirDb(db_path) as conn:
+		cur = conn.execute(q)
+		columnas = [desc[0] for desc in (cur.description or [])]
+		filas = cur.fetchmany(_MAX_FILAS_SQL)
+	return columnas, filas
+
+
+def exportarCsv(tabla: str, db_path: Path | None = None) -> str:
+	"""Exporta una tabla como CSV (cadena de texto). Valida nombre de tabla."""
+	tablas_validas = listarTablas(db_path)
+	if tabla not in tablas_validas:
+		raise ValueError(f"Tabla no encontrada: {tabla}")
+	columnas, filas = ejecutarSelectSeguro(f"SELECT * FROM {tabla}", db_path)
+	buf = io.StringIO()
+	writer = csv.writer(buf)
+	writer.writerow(columnas)
+	writer.writerows(filas)
+	return buf.getvalue()
+
+
+def exportarJson(tabla: str, db_path: Path | None = None) -> str:
+	"""Exporta una tabla como JSON (Array de objetos). Valida nombre de tabla."""
+	tablas_validas = listarTablas(db_path)
+	if tabla not in tablas_validas:
+		raise ValueError(f"Tabla no encontrada: {tabla}")
+	columnas, filas = ejecutarSelectSeguro(f"SELECT * FROM {tabla}", db_path)
+	registros = [dict(zip(columnas, fila)) for fila in filas]
+	return json.dumps(registros, ensure_ascii=False, indent=2)
+
 
 def rutaEnvLocal() -> Path:
 	"""Devuelve la ruta del archivo .env operativo del servidor."""
@@ -65,7 +173,8 @@ class AppConfiguracion(App[None]):
 		Binding("2", "configurar", "[2] Configurar"),
 		Binding("3", "ver_logs", "[3] Ver logs"),
 		Binding("4", "limpiar_mensajes", "[4] Limpiar mensajes"),
-		Binding("5", "salir", "[5] Salir"),
+		Binding("5", "ver_metricas", "[5] Metricas"),
+		Binding("6", "salir", "[6] Salir"),
 		Binding("q", "salir", "Salir"),
 	]
 
@@ -88,9 +197,9 @@ class AppConfiguracion(App[None]):
 		with Vertical(id="panel"):
 			yield Static(
 				"Qrypta TUI\n"
-				"Use teclas 1-5 o escriba comandos: \n"
-				"set HOST=0.0.0.0 | set PUERTO=8000 | set TTL_MENSAJES_H=24 | set RATE_LIMIT=30/minute\n"
-				"show config",
+				"Use teclas 1-6 o escriba comandos:\n"
+				"help | ping | show config | set HOST=0.0.0.0 | set PUERTO=8000\n"
+				"set TTL_MENSAJES_H=24 | set RATE_LIMIT=30/minute | tail 25",
 				id="salida",
 			)
 			yield Input(placeholder="Comando", id="entrada")
@@ -114,9 +223,142 @@ class AppConfiguracion(App[None]):
 		if not comando:
 			return
 
+		if comando.lower() == "help":
+			self._setSalida(
+				"Comandos disponibles:\n"
+				"- help\n"
+				"- ping (consulta /v1/estado)\n"
+				"- show config\n"
+				"- set HOST=... | PUERTO=... | TTL_MENSAJES_H=... | RATE_LIMIT=... | ADMIN_TOKEN=...\n"
+				"- tail N (ultimas N lineas de auditoria, max 200)\n"
+				"[Usuarios]\n"
+				"- users list\n"
+				"- ban <userId> [motivo]\n"
+				"- unban <userId>\n"
+				"[Rate limit]\n"
+				"- rate show\n"
+				"- rate set <N>/minute\n"
+				"[SQL Browser]\n"
+				"- sql tables\n"
+				"- sql select <query>\n"
+				"- export csv <tabla>\n"
+				"- export json <tabla>"
+			)
+			return
+
+		# ---- Gestión de usuarios (AdminTUI.2) --------------------------------
+		if comando.lower() == "users list":
+			usuarios = listarUsuarios()
+			if not usuarios:
+				self._setSalida("No hay usuarios registrados en el sistema local.")
+				return
+			lineas = [f"- {u['id']} [{u['estado']}] motivo: {u.get('motivo', '-')}" for u in usuarios]
+			self._setSalida("Usuarios:\n" + "\n".join(lineas))
+			return
+
+		if comando.lower().startswith("ban "):
+			partes = comando[4:].split(" ", 1)
+			userId = partes[0].strip()
+			motivo = partes[1].strip() if len(partes) > 1 else "ban manual"
+			if not userId:
+				self._setSalida("Uso: ban <userId> [motivo]")
+				return
+			banearUsuario(userId, motivo)
+			self._setSalida(f"Usuario baneado: {userId} (motivo: {motivo})")
+			return
+
+		if comando.lower().startswith("unban "):
+			userId = comando[6:].strip()
+			if not userId:
+				self._setSalida("Uso: unban <userId>")
+				return
+			ok = desbanearUsuario(userId)
+			self._setSalida(f"Ban eliminado: {userId}" if ok else f"Usuario no encontrado: {userId}")
+			return
+
+		# ---- Rate limit (AdminTUI.2) -----------------------------------------
+		if comando.lower() == "rate show":
+			env = cargarEnvLocal()
+			rate = env.get("RATE_LIMIT", settings.rateLimit if hasattr(settings, "rateLimit") else "30/minute")
+			self._setSalida(f"Rate limit actual: {rate}")
+			return
+
+		if comando.lower().startswith("rate set "):
+			valor = comando[9:].strip()
+			if "/" not in valor:
+				self._setSalida("Formato: rate set 30/minute")
+				return
+			env = cargarEnvLocal()
+			env["RATE_LIMIT"] = valor
+			guardarEnvLocal(env)
+			self._setSalida(f"Rate limit actualizado: {valor}")
+			return
+
+		# ---- SQL Browser (AdminTUI.3) ----------------------------------------
+		if comando.lower() == "sql tables":
+			try:
+				tablas = listarTablas()
+				if not tablas:
+					self._setSalida("No hay tablas en la base de datos.")
+					return
+				self._setSalida("Tablas:\n" + "\n".join(f"- {t}" for t in tablas))
+			except FileNotFoundError as exc:
+				self._setSalida(str(exc))
+			return
+
+		if comando.lower().startswith("sql select "):
+			query = comando[11:].strip()
+			try:
+				columnas, filas = ejecutarSelectSeguro(query)
+				cabecera = " | ".join(columnas)
+				separador = "-" * len(cabecera)
+				lineas = [cabecera, separador] + [" | ".join(str(v) for v in fila) for fila in filas]
+				aviso = f"\n(mostrando max {_MAX_FILAS_SQL} filas)" if len(filas) == _MAX_FILAS_SQL else ""
+				self._setSalida("\n".join(lineas) + aviso)
+			except (ValueError, FileNotFoundError, sqlite3.Error) as exc:
+				self._setSalida(f"Error SQL: {exc}")
+			return
+
+		if comando.lower().startswith("export csv "):
+			tabla = comando[11:].strip()
+			try:
+				contenido = exportarCsv(tabla)
+				self._setSalida(f"CSV de '{tabla}':\n{contenido[:2000]}")
+			except (ValueError, FileNotFoundError) as exc:
+				self._setSalida(f"Error export: {exc}")
+			return
+
+		if comando.lower().startswith("export json "):
+			tabla = comando[12:].strip()
+			try:
+				contenido = exportarJson(tabla)
+				self._setSalida(f"JSON de '{tabla}':\n{contenido[:2000]}")
+			except (ValueError, FileNotFoundError) as exc:
+				self._setSalida(f"Error export: {exc}")
+			return
+
+		if comando.lower() == "ping":
+			self.action_ver_estado()
+			return
+
 		if comando.lower() == "show config":
 			env = cargarEnvLocal()
 			self._setSalida("Configuracion actual:\n" + json.dumps(env, ensure_ascii=True, indent=2))
+			return
+
+		if comando.lower().startswith("tail "):
+			partes = comando.split(" ", 1)
+			try:
+				limite = max(1, min(200, int(partes[1].strip())))
+			except ValueError:
+				self._setSalida("Valor invalido. Use: tail 25")
+				return
+			rutaLog = Path(settings.logDir) / "auditoria.jsonl"
+			lineas = ultimasLineas(rutaLog, limite=limite)
+			if not lineas:
+				self._setSalida("No hay logs para mostrar")
+				return
+			self._setSalida("\n".join(lineas))
 			return
 
 		if comando.lower().startswith("set ") and "=" in comando:
@@ -152,6 +394,22 @@ class AppConfiguracion(App[None]):
 			"Claves: HOST, PUERTO, TTL_MENSAJES_H, RATE_LIMIT, ADMIN_TOKEN\n"
 			f"Actual: {json.dumps(env, ensure_ascii=True)}"
 		)
+
+	def action_ver_metricas(self) -> None:
+		try:
+			with httpx.Client(timeout=5.0) as cliente:
+				estado = cliente.get(f"{self._baseUrl()}/v1/estado")
+				estado.raise_for_status()
+			datos = estado.json()
+			self._setSalida(
+				"Metricas operativas:\n"
+				f"- Version: {datos.get('version', '-') }\n"
+				f"- Uptime (s): {datos.get('uptimeS', '-') }\n"
+				f"- Mensajes en cola: {datos.get('mensajesPendientes', '-') }\n"
+				f"- Timestamp: {datos.get('timestamp', '-') }"
+			)
+		except Exception as exc:  # pragma: no cover - depende de server vivo
+			self._setSalida(f"No se pudieron consultar metricas: {exc}")
 
 	def action_ver_logs(self) -> None:
 		rutaLog = Path(settings.logDir) / "auditoria.jsonl"
