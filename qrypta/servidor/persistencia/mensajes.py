@@ -25,7 +25,7 @@ class MensajePendiente:
 def init_db(db_path: str = DB_PATH):
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute(
+    c.executescript(
         """
         CREATE TABLE IF NOT EXISTS mensajes_pendientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
