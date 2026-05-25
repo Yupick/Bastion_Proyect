@@ -295,18 +295,20 @@ async def ws_stats() -> dict[str, Any]:
 async def upload_archivo(sesion_id: str, peer_id: str, file: UploadFile = File(...)) -> dict[str, Any]:
 	"""Sube un archivo cifrado."""
 	try:
-		validar_archivo(file.filename, file.spool_max_size or 0)
+		# Leer el contenido para calcular el tamaño real antes de validar
+		contenido = await file.read()
+		tam = len(contenido)
+		validar_archivo(file.filename, tam)
 	except ArchivoInvalido as e:
 		raise HTTPException(status_code=400, detail=str(e))
-	
+
 	ext = Path(file.filename).suffix
 	nombre = f"{uuid4().hex}{ext}"
 	ruta = UPLOAD_DIR / nombre
-	
+
 	with open(ruta, "wb") as f:
-		contenido = await file.read()
 		f.write(contenido)
-	
+
 	auditor.registrarEvento("archivo_subido", len(contenido), True)
 	return {"ok": True, "filename": nombre, "size": len(contenido)}
 
