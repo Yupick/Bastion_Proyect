@@ -26,7 +26,7 @@ jobs:
       - name: Try install Python binding 'oqs'
         run: |
           python -m pip install --upgrade pip
-          python -m pip install oqs || echo "oqs install failed; tests that require it may fail"
+          python -m pip install oqs || echo "oqs install failed; tests marked with requires_oqs will be skipped"
 
       - name: Instalar dependencias
         run: |
