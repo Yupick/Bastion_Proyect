@@ -2,6 +2,21 @@
 
 Fecha: 2026-05-25
 
+Actualizacion: 2026-05-26
+----------------------------------
+Se ejecuto un gate de preparacion beta para clientes y el estado actual es:
+
+- Cliente web: PASS (tests y build)
+- Cliente escritorio: PASS (tests y build)
+- Cliente movil: PASS (flutter test)
+
+Evidencia automatizada:
+- Script: `scripts/beta_clients_ready.sh`
+- Reporte generado: `qrypta/docs/BETA_CLIENTS_READINESS.md`
+
+Bloqueo resuelto durante esta ronda:
+- Error de compilacion TypeScript en `cliente_web` (variable `tokenAntes` potencialmente no inicializada en test) corregido para permitir build reproducible.
+
 Resumen ejecutivo
 ------------------
 El repositorio está funcional para desarrollo local del servidor y de clientes web. Se han corregido varios fallos del backend, los tests del servidor pasan y hay un plan de trabajo para estabilizar dependencias nativas (liboqs) y toolchains (Rust/Android) necesarios para builds de Tauri y Flutter.
