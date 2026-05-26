@@ -53,3 +53,14 @@ bash scripts/server_ctl.sh logs
 - Abrir el comando: `Dev Containers: Reopen in Container`.
 - El contenedor instala dependencias con `requirements-dev.txt` al crearse.
 
+## Beta de clientes (gate de preparación)
+
+- Ejecuta el gate unificado:
+  `scripts/beta_clients_ready.sh`
+- El script valida:
+  - Cliente web: tests + build
+  - Cliente escritorio: tests + build
+  - Cliente móvil: flutter test
+- Genera reporte en:
+  - `qrypta/docs/BETA_CLIENTS_READINESS.md`
+

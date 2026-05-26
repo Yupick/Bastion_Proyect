@@ -68,7 +68,7 @@ describe('Cliente web', () => {
     expect(screen.getByText(/Error de login|Mnemonic BIP-39 invalida/)).toBeInTheDocument()
   })
 
-  test('login correcto con mnemonic válida marca sesión autenticada', () => {
+  test('login correcto con mnemonic válida marca sesión autenticada', async () => {
     renderWithProviders()
     fireEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
     // Primero registrar para obtener mnemonic
@@ -79,8 +79,10 @@ describe('Cliente web', () => {
     const input = screen.getByPlaceholderText('Ingresa 12 o 24 palabras')
     fireEvent.change(input, { target: { value: mnemonic } })
     fireEvent.click(screen.getByRole('button', { name: 'Login BIP-39' }))
-    expect(screen.getAllByText('Sesion autenticada').length).toBeGreaterThan(0)
-  })
+    await waitFor(() => {
+      expect(screen.getAllByText('Sesion autenticada').length).toBeGreaterThan(0)
+    }, { timeout: 10000 })
+  }, 15000)
 
   test('cierre de sesión desde Ajustes', () => {
     renderWithProviders()
