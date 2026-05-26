@@ -20,6 +20,39 @@ Este sistema permite comunicación segura, privada y auditable usando criptograf
 - El panel permite editar variables del servidor y ver logs de auditoría.
 - Los cambios se guardan en `.env` y se aplican al reiniciar el servidor.
 
+## Onboarding rápido (desarrollo)
+
+### 1) Preparar entorno local
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r qrypta/servidor/requirements-dev.txt
+```
+
+### 2) Ejecutar pruebas
+
+```bash
+pytest -q qrypta/servidor/tests
+pytest -q qrypta/nucleo_crypto/tests
+```
+
+Nota: si `oqs` no está disponible, algunos tests criptográficos se omiten automáticamente.
+
+### 3) Levantar servidor local
+
+```bash
+bash scripts/server_ctl.sh start
+bash scripts/server_ctl.sh status
+bash scripts/server_ctl.sh logs
+```
+
+### 4) Usar Dev Container en VS Code
+
+- Abrir el comando: `Dev Containers: Reopen in Container`.
+- El contenedor instala dependencias con `requirements-dev.txt` al crearse.
+
 ## Beta de clientes (gate de preparación)
 
 - Ejecuta el gate unificado:
