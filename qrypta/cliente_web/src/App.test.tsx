@@ -47,6 +47,18 @@ describe('Cliente web', () => {
     expect(screen.getByRole('heading', { name: 'Resumen de contactos' })).toBeInTheDocument()
   })
 
+  test('navega a la sección Grupos', () => {
+    renderWithProviders()
+    fireEvent.click(screen.getByRole('button', { name: 'Grupos' }))
+    expect(screen.getByRole('heading', { name: 'Mensajeria de grupos' })).toBeInTheDocument()
+  })
+
+  test('navega a la sección Backup', () => {
+    renderWithProviders()
+    fireEvent.click(screen.getByRole('button', { name: 'Backup' }))
+    expect(screen.getByRole('heading', { name: 'Backup y restore' })).toBeInTheDocument()
+  })
+
   test('vuelve a la sección Chats desde Ajustes', () => {
     renderWithProviders()
     fireEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
