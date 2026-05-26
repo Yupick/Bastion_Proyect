@@ -7,6 +7,8 @@ Fecha: 2026-03-30
 
 import pytest
 
+pytestmark = pytest.mark.requires_oqs
+
 from nucleo_crypto.crypto.keygen import generarParDilithium, generarParKyber
 from nucleo_crypto.crypto.sesion import (
 	ErrorContador,

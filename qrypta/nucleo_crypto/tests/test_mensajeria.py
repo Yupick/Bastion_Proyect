@@ -9,6 +9,8 @@ import base64
 
 import pytest
 
+pytestmark = pytest.mark.requires_oqs
+
 from nucleo_crypto.contactos.lista import Contacto
 from nucleo_crypto.crypto.keygen import generarParDilithium, generarParKyber
 from nucleo_crypto.identidad.registro import _calcularPeerId
