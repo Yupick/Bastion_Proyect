@@ -15,3 +15,10 @@ Sistema de mensajeria hibrido poscuantico con privacidad radical y auditoria ver
 - main: estable
 - develop: integracion
 - feature/*, release/*, hotfix/*
+
+## Gate beta de clientes
+
+Para validar que los clientes estan listos para pruebas beta:
+
+1. Ejecutar `../scripts/beta_clients_ready.sh` desde esta carpeta (o `scripts/beta_clients_ready.sh` desde la raiz).
+2. Revisar el resultado consolidado en `docs/BETA_CLIENTS_READINESS.md`.
