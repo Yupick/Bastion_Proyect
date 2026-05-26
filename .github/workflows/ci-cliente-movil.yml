@@ -2,13 +2,23 @@ name: CI Cliente Movil
 
 on:
   push:
+    branches: [develop, main]
     paths:
       - 'qrypta/cliente_movil/**'
       - '.github/workflows/ci-cliente-movil.yml'
   pull_request:
+    branches: [develop, main]
     paths:
       - 'qrypta/cliente_movil/**'
       - '.github/workflows/ci-cliente-movil.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cliente-movil-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   flutter-checks:
@@ -25,6 +35,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Flutter pub get
         run: flutter pub get
@@ -49,6 +60,10 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
 
       - name: Build Android APK (debug)
         run: flutter build apk --debug
@@ -67,6 +82,10 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
 
       - name: Build iOS without codesign
         run: flutter build ios --no-codesign
