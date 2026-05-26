@@ -20,3 +20,14 @@ Este sistema permite comunicación segura, privada y auditable usando criptograf
 - El panel permite editar variables del servidor y ver logs de auditoría.
 - Los cambios se guardan en `.env` y se aplican al reiniciar el servidor.
 
+## Beta de clientes (gate de preparación)
+
+- Ejecuta el gate unificado:
+  `scripts/beta_clients_ready.sh`
+- El script valida:
+  - Cliente web: tests + build
+  - Cliente escritorio: tests + build
+  - Cliente móvil: flutter test
+- Genera reporte en:
+  - `qrypta/docs/BETA_CLIENTS_READINESS.md`
+

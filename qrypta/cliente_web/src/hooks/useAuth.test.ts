@@ -53,7 +53,7 @@ describe('useAuth', () => {
 
   test('refresh renueva el token', () => {
     const { result } = renderHook(() => useAuth())
-    let tokenAntes: string
+    let tokenAntes = ''
     act(() => {
       const mnemonic = result.current.register()
       result.current.login(mnemonic)
