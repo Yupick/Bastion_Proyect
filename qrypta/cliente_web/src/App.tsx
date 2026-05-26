@@ -4,6 +4,7 @@ import { useChat } from './hooks/useChat'
 import { useContacts } from './hooks/useContacts'
 import { Button } from './components/ui/button'
 import { decryptMessage, encryptMessage } from './services/cryptoService'
+import { exportEncryptedBackup, importEncryptedBackup } from './services/backupService'
 import { cacheMessage } from './services/indexedDbService'
 import { useUiStore } from './store/uiStore'
 import './App.css'
@@ -66,7 +67,9 @@ const HORA_FORMATTER = new Intl.DateTimeFormat('es-ES', {
 })
 
 function App() {
-  const [seccion, setSeccion] = useState<'chats' | 'contactos' | 'dispositivos' | 'ajustes'>('chats')
+  const [seccion, setSeccion] = useState<'chats' | 'contactos' | 'dispositivos' | 'grupos' | 'ajustes' | 'backup'>(
+    'chats',
+  )
   const contactoActivoId = useUiStore((state) => state.activeContactId)
   const setContactoActivoId = useUiStore((state) => state.setActiveContactId)
   const [texto, setTexto] = useState('')
@@ -88,6 +91,15 @@ function App() {
   const [mnemonicGenerada, setMnemonicGenerada] = useState('')
   const [authError, setAuthError] = useState<string | null>(null)
   const [pushStatus, setPushStatus] = useState('Push sin configurar')
+  const [groupId, setGroupId] = useState('equipo-ops')
+  const [groupMembers, setGroupMembers] = useState('c1,c2,c3')
+  const [groupMessage, setGroupMessage] = useState('')
+  const [groupTimeline, setGroupTimeline] = useState<string[]>([])
+  const [deviceAlias, setDeviceAlias] = useState('Laptop oficina')
+  const [linkedDevices, setLinkedDevices] = useState<string[]>(['Movil principal'])
+  const [backupPassphrase, setBackupPassphrase] = useState('')
+  const [backupBlob, setBackupBlob] = useState('')
+  const [backupStatus, setBackupStatus] = useState('Sin backup exportado')
 
   const { contacts } = useContacts()
   const { isAuthenticated, authStatus, register, login, refresh, registerWebAuthn, logout } = useAuth()
@@ -218,6 +230,76 @@ function App() {
     }
   }
 
+  const vincularDispositivo = () => {
+    const alias = deviceAlias.trim()
+    if (!alias) {
+      return
+    }
+
+    setLinkedDevices((prev) => {
+      if (prev.includes(alias)) {
+        return prev
+      }
+      return [...prev, alias]
+    })
+  }
+
+  const desvincularDispositivo = (alias: string) => {
+    setLinkedDevices((prev) => prev.filter((item) => item !== alias))
+  }
+
+  const crearGrupo = () => {
+    const id = groupId.trim()
+    if (!id) {
+      return
+    }
+
+    const miembros = groupMembers
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join(', ')
+
+    setGroupTimeline((prev) => [`Grupo ${id} creado con ${miembros || 'sin miembros'}`, ...prev].slice(0, 8))
+  }
+
+  const publicarEnGrupo = () => {
+    const msg = groupMessage.trim()
+    if (!msg) {
+      return
+    }
+    setGroupTimeline((prev) => [`${ajustes.alias}: ${msg}`, ...prev].slice(0, 8))
+    setGroupMessage('')
+  }
+
+  const exportarBackup = async () => {
+    try {
+      const snapshot = {
+        alias: ajustes.alias,
+        mnemonic: mnemonicGenerada || mnemonicInput,
+        deviceLinks: linkedDevices,
+        exportedAt: new Date().toISOString(),
+      }
+      const blob = await exportEncryptedBackup(snapshot, backupPassphrase)
+      setBackupBlob(blob)
+      setBackupStatus('Backup cifrado generado')
+    } catch (error) {
+      setBackupStatus(error instanceof Error ? `Error exportando backup: ${error.message}` : 'Error exportando backup')
+    }
+  }
+
+  const restaurarBackup = async () => {
+    try {
+      const restored = await importEncryptedBackup(backupBlob, backupPassphrase)
+      setAjustes((prev) => ({ ...prev, alias: restored.alias }))
+      setMnemonicInput(restored.mnemonic)
+      setLinkedDevices(restored.deviceLinks)
+      setBackupStatus(`Backup restaurado (${restored.exportedAt})`)
+    } catch (error) {
+      setBackupStatus(error instanceof Error ? `Error restaurando backup: ${error.message}` : 'Error restaurando backup')
+    }
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -250,11 +332,25 @@ function App() {
             Dispositivos
           </button>
           <button
+            className={`menu-item ${seccion === 'grupos' ? 'active' : ''}`}
+            type="button"
+            onClick={() => setSeccion('grupos')}
+          >
+            Grupos
+          </button>
+          <button
             className={`menu-item ${seccion === 'ajustes' ? 'active' : ''}`}
             type="button"
             onClick={() => setSeccion('ajustes')}
           >
             Ajustes
+          </button>
+          <button
+            className={`menu-item ${seccion === 'backup' ? 'active' : ''}`}
+            type="button"
+            onClick={() => setSeccion('backup')}
+          >
+            Backup
           </button>
         </nav>
 
@@ -391,6 +487,54 @@ function App() {
               URL WebSocket
               <input value={wsUrl} onChange={(event) => setWsUrl(event.target.value)} />
             </label>
+            <label>
+              Alias de dispositivo
+              <input value={deviceAlias} onChange={(event) => setDeviceAlias(event.target.value)} />
+            </label>
+            <Button type="button" onClick={vincularDispositivo} variant="secondary">
+              Vincular dispositivo
+            </Button>
+            <ul className="simple-list">
+              {linkedDevices.map((alias) => (
+                <li key={alias}>
+                  <span>{alias}</span>
+                  <button type="button" onClick={() => desvincularDispositivo(alias)}>
+                    Desvincular
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {seccion === 'grupos' ? (
+          <section className="config-card">
+            <h3>Mensajeria de grupos</h3>
+            <label>
+              Group ID
+              <input value={groupId} onChange={(event) => setGroupId(event.target.value)} />
+            </label>
+            <label>
+              Miembros
+              <input value={groupMembers} onChange={(event) => setGroupMembers(event.target.value)} />
+            </label>
+            <div className="action-inline">
+              <Button type="button" onClick={crearGrupo} variant="secondary">
+                Crear grupo
+              </Button>
+            </div>
+            <label>
+              Mensaje de grupo
+              <input value={groupMessage} onChange={(event) => setGroupMessage(event.target.value)} />
+            </label>
+            <Button type="button" onClick={publicarEnGrupo}>
+              Enviar al grupo
+            </Button>
+            <ul className="simple-list">
+              {groupTimeline.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </section>
         ) : null}
 
@@ -531,6 +675,33 @@ function App() {
             <h3>Resumen de contactos</h3>
             <p>Selecciona un contacto desde el panel derecho para iniciar chat.</p>
             <p>{contacts.filter((c) => c.estado === 'online').length} contactos online.</p>
+          </section>
+        ) : null}
+
+        {seccion === 'backup' ? (
+          <section className="config-card">
+            <h3>Backup y restore</h3>
+            <label>
+              Passphrase de backup
+              <input
+                type="password"
+                value={backupPassphrase}
+                onChange={(event) => setBackupPassphrase(event.target.value)}
+              />
+            </label>
+            <div className="action-inline">
+              <Button type="button" onClick={exportarBackup} variant="secondary">
+                Exportar backup
+              </Button>
+              <Button type="button" onClick={restaurarBackup}>
+                Restaurar backup
+              </Button>
+            </div>
+            <label>
+              Blob cifrado
+              <textarea value={backupBlob} onChange={(event) => setBackupBlob(event.target.value)} />
+            </label>
+            <p>{backupStatus}</p>
           </section>
         ) : null}
 

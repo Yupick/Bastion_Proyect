@@ -12,4 +12,9 @@ describe('Cliente escritorio', () => {
     render(<App />)
     expect(screen.getByText('Drag and Drop')).toBeInTheDocument()
   })
+
+  test('renderiza panel de backup y restore', () => {
+    render(<App />)
+    expect(screen.getByText('Backup y restore')).toBeInTheDocument()
+  })
 })

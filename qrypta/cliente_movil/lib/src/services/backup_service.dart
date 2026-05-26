@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:qrypta_cliente_flutter/src/models/identity.dart';
@@ -69,8 +70,7 @@ class BackupService {
   }
 
   List<int> _nonce() {
-    final now = DateTime.now().microsecondsSinceEpoch;
-    final raw = utf8.encode('$now:${now.hashCode}:qrypta');
-    return raw.take(12).toList(growable: false);
+    final random = Random.secure();
+    return List<int>.generate(12, (_) => random.nextInt(256), growable: false);
   }
 }
