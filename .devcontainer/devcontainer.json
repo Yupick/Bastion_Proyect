@@ -1,11 +1,18 @@
 {
   "name": "Qrypta Devcontainer",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12",
-  "features": {
-    "ghcr.io/devcontainers/features/node:1": {},
-    "ghcr.io/devcontainers/features/rust:1": {}
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
   },
-  "postCreateCommand": "python -m pip install -r qrypta/servidor/requirements.txt",
+  "postCreateCommand": "python -m pip install --upgrade pip && python -m pip install -r qrypta/servidor/requirements-dev.txt",
   "forwardPorts": [8000],
-  "workspaceFolder": "/workspace"
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  }
 }
