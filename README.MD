@@ -64,3 +64,10 @@ bash scripts/server_ctl.sh logs
 - Genera reporte en:
   - `qrypta/docs/BETA_CLIENTS_READINESS.md`
 
+## CI/CD y publicación Docker
+
+- El workflow `release` publica versiones para tags con formato `vX.Y.Z`.
+- El workflow `docker-publish-servidor` valida el contenedor del servidor en PRs y publica la imagen en GHCR en `main` y en tags de release.
+- Imagen objetivo del servidor:
+  `ghcr.io/<owner-en-minusculas>/bastion-proyect-servidor`
+
