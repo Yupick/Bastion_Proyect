@@ -1,0 +1,152 @@
+name: docker-publish-servidor
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - '.github/workflows/docker-publish.yml'
+      - '.github/workflows/release.yml'
+      - 'qrypta/servidor/Dockerfile'
+      - 'qrypta/servidor/requirements.txt'
+      - 'README.MD'
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+    paths:
+      - '.github/workflows/docker-publish.yml'
+      - '.github/workflows/release.yml'
+      - 'qrypta/servidor/Dockerfile'
+      - 'qrypta/servidor/requirements.txt'
+      - 'README.MD'
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: 'Publicar imagen en GHCR'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-publish-servidor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-servidor-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.meta-vars.outputs.image_name }}
+      should_push: ${{ steps.meta-vars.outputs.should_push }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Definir metadatos base
+        id: meta-vars
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          PUSH_IMAGE_INPUT: ${{ inputs.push_image }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          owner_lower="${REPOSITORY_OWNER,,}"
+          image_name="ghcr.io/${owner_lower}/bastion-proyect-servidor"
+          should_push="false"
+
+          if [[ "$EVENT_NAME" == "push" && "$REF_NAME" == "main" ]]; then
+            should_push="true"
+          elif [[ "$EVENT_NAME" == "push" && "$REF_TYPE" == "tag" ]]; then
+            should_push="true"
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" && "$PUSH_IMAGE_INPUT" == "true" ]]; then
+            should_push="true"
+          fi
+
+          echo "image_name=$image_name" >> "$GITHUB_OUTPUT"
+          echo "should_push=$should_push" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Preparar metadata Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.meta-vars.outputs.image_name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=sha-${{ github.sha }},enable=${{ github.event_name != 'pull_request' }}
+            type=ref,event=pr
+            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' }}
+            type=semver,pattern={{major}},enable=${{ github.ref_type == 'tag' }}
+          labels: |
+            org.opencontainers.image.title=Qrypta Servidor
+            org.opencontainers.image.description=Servidor FastAPI del monorepo Qrypta.
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Login en GHCR
+        if: steps.meta-vars.outputs.should_push == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build de imagen del servidor
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: qrypta
+          file: qrypta/servidor/Dockerfile
+          push: ${{ steps.meta-vars.outputs.should_push == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Resumen de publicacion
+        run: |
+          {
+            echo '## Docker publish servidor'
+            echo ''
+            echo "- Imagen: ${{ steps.meta-vars.outputs.image_name }}"
+            echo "- Push ejecutado: ${{ steps.meta-vars.outputs.should_push }}"
+            echo "- Digest: ${{ steps.build.outputs.digest || 'no publicado' }}"
+            echo ''
+            echo '### Tags calculados'
+            echo '${{ steps.meta.outputs.tags }}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verify-published-image:
+    runs-on: ubuntu-latest
+    needs: build-servidor-image
+    if: needs.build-servidor-image.outputs.should_push == 'true'
+    steps:
+      - name: Login en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verificar referencia publicada
+        env:
+          IMAGE_NAME: ${{ needs.build-servidor-image.outputs.image_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [[ "$REF_TYPE" == "tag" ]]; then
+            image_ref="$IMAGE_NAME:$REF_NAME"
+          elif [[ "$REF_NAME" == "main" ]]; then
+            image_ref="$IMAGE_NAME:latest"
+          else
+            image_ref="$IMAGE_NAME:sha-${GITHUB_SHA}"
+          fi
+
+          docker manifest inspect "$image_ref" >/dev/null
