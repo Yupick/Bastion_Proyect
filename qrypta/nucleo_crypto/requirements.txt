@@ -1,0 +1,8 @@
+# Dependencias del nucleo criptografico
+argon2-cffi==23.1.0
+cryptography==42.0.8
+pytest==8.4.1
+pytest-asyncio==1.3.0
+
+# Opcional: liboqs binding (requiere dependencias nativas en el sistema)
+# oqs

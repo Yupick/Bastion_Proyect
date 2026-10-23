@@ -28,13 +28,12 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: |
-            qrypta/servidor/requirements.txt
-            qrypta/servidor/requirements-dev.txt
+            qrypta/nucleo_crypto/requirements.txt
 
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r qrypta/servidor/requirements-dev.txt
+          pip install -r qrypta/nucleo_crypto/requirements.txt
 
       - name: Crear carpeta de artefactos
         run: mkdir -p artifacts/test-results
@@ -63,13 +62,12 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: |
-            qrypta/servidor/requirements.txt
-            qrypta/servidor/requirements-dev.txt
+            qrypta/nucleo_crypto/requirements.txt
 
       - name: Instalar dependencias base
         run: |
           python -m pip install --upgrade pip
-          pip install -r qrypta/servidor/requirements-dev.txt
+          pip install -r qrypta/nucleo_crypto/requirements.txt
 
       - name: Instalar prerequisitos del sistema para liboqs
         run: |
