@@ -90,7 +90,7 @@ jobs:
 
       - name: Verificar instalacion oqs
         run: |
-          python -c "import oqs; print('oqs version:', oqs.__version__); print('KeyEncapsulation:', hasattr(oqs, 'KeyEncapsulation')); print('Signature:', hasattr(oqs, 'Signature'))"
+          python -c "import oqs; print('KeyEncapsulation:', hasattr(oqs, 'KeyEncapsulation')); print('Signature:', hasattr(oqs, 'Signature'))"
 
       - name: Crear carpeta de artefactos
         run: mkdir -p artifacts/test-results
