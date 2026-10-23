@@ -39,7 +39,7 @@ class MensajeCifrado:
 	- nonce (12 bytes): Nonce para AES-GCM
 	- ciphertext (variable): Contenido cifrado
 	- tag (16 bytes): Tag de autenticacion AES-GCM
-	- firma_dilithium (variable): Firma de todo lo anterior
+	- firma_ml_dsa (variable): Firma de todo lo anterior (~3293 bytes para ML-DSA-65)
 	"""
 	
 	peer_id_origen: bytes  # 32 bytes
@@ -49,7 +49,9 @@ class MensajeCifrado:
 	nonce: bytes  # 12 bytes
 	ciphertext: bytes  # variable
 	tag: bytes  # 16 bytes
-	firma_dilithium: bytes  # variable (~2420 bytes para Dilithium3)
+	firma_dilithium: bytes  # variable (~3293 bytes para ML-DSA-65)
+	
+	TAMANIO_FIRMA = 3293  # ML-DSA-65 signature size
 	
 	def serializar(self) -> bytes:
 		"""Serializa el mensaje a bytes para transmision."""
@@ -100,20 +102,20 @@ class MensajeCifrado:
 		offset += 12
 		
 		# El resto es ciphertext + tag + firma
-		# Firma Dilithium3 tiene ~2420 bytes
+		# Firma ML-DSA-65 tiene 3293 bytes
 		# Tag AES-GCM tiene 16 bytes
-		# Necesitamos al menos 16 + 2420 bytes mas
-		if len(data) < offset + 16 + 2420:
+		# Necesitamos al menos 16 + 3293 bytes mas
+		if len(data) < offset + 16 + MensajeCifrado.TAMANIO_FIRMA:
 			raise ErrorMensaje("Mensaje incompleto (falta tag o firma)")
 		
-		# Firma esta al final (tamaño variable, tipicamente ~2420 bytes)
+		# Firma esta al final (tamaño fijo para ML-DSA-65: 3293 bytes)
 		# Tag esta antes de la firma (16 bytes)
 		# Ciphertext esta entre nonce y tag
 		
 		# Extraemos del final hacia atras
-		firma_dilithium = data[-(2420):]  # Firma al final
-		tag = data[-(2420 + 16):-(2420)]  # Tag antes de firma
-		ciphertext = data[offset:-(2420 + 16)]  # Ciphertext entre nonce y tag
+		firma_dilithium = data[-(MensajeCifrado.TAMANIO_FIRMA):]  # Firma al final
+		tag = data[-(MensajeCifrado.TAMANIO_FIRMA + 16):-(MensajeCifrado.TAMANIO_FIRMA)]  # Tag antes de firma
+		ciphertext = data[offset:-(MensajeCifrado.TAMANIO_FIRMA + 16)]  # Ciphertext entre nonce y tag
 		
 		return MensajeCifrado(
 			peer_id_origen=peer_id_origen,
