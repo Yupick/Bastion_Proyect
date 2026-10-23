@@ -83,6 +83,9 @@ jobs:
           ninja
           sudo ninja install
           sudo ldconfig
+          # Instalar binding Python
+          cd /tmp/liboqs/build/python
+          pip install .
 
       - name: Verificar instalacion oqs
         run: |
