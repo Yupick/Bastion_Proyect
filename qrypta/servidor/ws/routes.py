@@ -103,7 +103,7 @@ async def _verificar_autenticacion(peer_id: str, firma_b64: str, timestamp: int)
 		firma = base64.b64decode(firma_b64)
 
 		import oqs
-		with oqs.Signature("Dilithium3") as cliente_firma:
+		with oqs.Signature("ML-DSA-65") as cliente_firma:
 			if not cliente_firma.verify(payload, firma, pubkey):
 				return False
 	except Exception:

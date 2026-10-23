@@ -36,7 +36,7 @@ class NodoDHT:
 		try:
 			pubkey = base64.b64decode(pubkey_b64)
 			firma = base64.b64decode(firma_b64)
-			with oqs.Signature("Dilithium3") as cliente_firma:
+			with oqs.Signature("ML-DSA-65") as cliente_firma:
 				return bool(cliente_firma.verify(payload, firma, pubkey))
 		except Exception:
 			return False

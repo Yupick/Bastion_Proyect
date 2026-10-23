@@ -35,9 +35,9 @@ def generarParKyber() -> tuple[bytes, bytes]:
 
 
 def generarParDilithium() -> tuple[bytes, bytes]:
-	"""Genera un par de claves Dilithium3 (publica, privada)."""
+	"""Genera un par de claves ML-DSA-65 (publica, privada)."""
 	_requiereLiboqs()
-	with oqs.Signature("Dilithium3") as clienteFirma:
+	with oqs.Signature("ML-DSA-65") as clienteFirma:
 		clavePublica = clienteFirma.generate_keypair()
 		clavePrivada = clienteFirma.export_secret_key()
 	return clavePublica, clavePrivada

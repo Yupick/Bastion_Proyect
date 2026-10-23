@@ -24,15 +24,15 @@ def _requiereLiboqs() -> None:
 
 
 def firmar(mensaje: bytes, clavePrivadaDilithium: bytes) -> bytes:
-	"""Firma un mensaje usando Dilithium3."""
+	"""Firma un mensaje usando ML-DSA-65."""
 	_requiereLiboqs()
-	with oqs.Signature("Dilithium3", secret_key=clavePrivadaDilithium) as clienteFirma:
+	with oqs.Signature("ML-DSA-65", secret_key=clavePrivadaDilithium) as clienteFirma:
 		firmaDigital = clienteFirma.sign(mensaje)
 	return firmaDigital
 
 
 def verificar(mensaje: bytes, firmaDigital: bytes, clavePublicaDilithium: bytes) -> bool:
-	"""Verifica una firma Dilithium3."""
+	"""Verifica una firma ML-DSA-65."""
 	_requiereLiboqs()
-	with oqs.Signature("Dilithium3") as clienteFirma:
+	with oqs.Signature("ML-DSA-65") as clienteFirma:
 		return bool(clienteFirma.verify(mensaje, firmaDigital, clavePublicaDilithium))
