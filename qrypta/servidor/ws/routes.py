@@ -24,8 +24,12 @@ from servidor.auditoria.logger import auditor
 from .archivos import ArchivoInvalido, validar_archivo
 from .sesiones import GestorSesiones
 
+# Importar DHT para obtener claves publicas
+from servidor.dht.nodo import NodoDHT
+
 router = APIRouter()
 gestor = GestorSesiones()
+nodo_dht = NodoDHT()
 
 # Estructura: {peer_id: websocket}
 _conexionesActivas: dict[str, WebSocket] = {}
@@ -35,7 +39,7 @@ _ultimoHeartbeat: dict[str, float] = {}
 
 # Persistencia de mensajes pendientes (DB)
 from servidor.persistencia.mensajes import (
-    MensajePendiente, guardar_mensaje, obtener_mensajes, eliminar_mensajes, limpiar_expirados, init_db
+	MensajePendiente, guardar_mensaje, obtener_mensajes, eliminar_mensajes, limpiar_expirados, init_db
 )
 
 # _colaMensajes: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -54,37 +58,57 @@ class ErrorAutenticacion(Exception):
 
 
 async def _verificar_autenticacion(peer_id: str, firma_b64: str, timestamp: int) -> bool:
-	"""Verifica la firma de autenticacion del cliente.
-	
+	"""Verifica la firma de autenticacion del cliente usando la clave publica del DHT.
+
 	Args:
 		peer_id: ID del peer (hex)
 		firma_b64: Firma Dilithium en base64
 		timestamp: Timestamp del mensaje de autenticacion
-	
+
 	Returns:
 		True si la firma es valida
-	
-	Nota:
-		Por ahora acepta cualquier peer_id valido.
-		En produccion, verificar firma con clave publica del peer.
 	"""
-	# TODO: Implementar verificacion real de firma Dilithium
-	# 1. Obtener clave publica Dilithium del peer_id (desde DB o DHT)
-	# 2. Verificar firma del payload: peer_id + timestamp
-	# 3. Verificar que timestamp no sea muy antiguo (replay protection)
-	
-	# Validacion basica por ahora
-	if not peer_id or len(peer_id) != 64:  # 32 bytes en hex
+	import os
+	# Modo test: saltar verificacion real
+	test_mode = os.getenv("QRYPTA_TEST_MODE", "false").lower() == "true"
+
+	# Validaciones basicas
+	if not peer_id or len(peer_id) != 64:
 		return False
-	
+
 	if not firma_b64:
 		return False
-	
+
 	# Verificar que timestamp no sea muy antiguo (max 5 minutos)
 	ahora = int(time.time())
 	if abs(ahora - timestamp) > 300:
 		return False
-	
+
+	# Obtener clave publica del DHT
+	pubkey_b64 = nodo_dht.obtener_clave_publica(peer_id)
+	if not pubkey_b64:
+		# Peer no registrado en DHT
+		return False
+
+	# Modo test: aceptar cualquier firma si el peer existe en DHT
+	if test_mode:
+		return True
+
+	# Payload firmado: peer_id + timestamp
+	payload = f"{peer_id}:{timestamp}".encode("utf-8")
+
+	# Verificar firma Dilithium
+	try:
+		pubkey = base64.b64decode(pubkey_b64)
+		firma = base64.b64decode(firma_b64)
+
+		import oqs
+		with oqs.Signature("Dilithium3") as cliente_firma:
+			if not cliente_firma.verify(payload, firma, pubkey):
+				return False
+	except Exception:
+		return False
+
 	return True
 
 

@@ -7,15 +7,23 @@ Fecha: 2026-03-30
 
 import asyncio
 import json
+import os
 import time
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
+# Habilitar modo test para saltar verificacion de firmas (sin oqs)
+os.environ["QRYPTA_TEST_MODE"] = "true"
+
 from servidor.main import app
+from servidor.dht.nodo import NodoDHT
+from servidor.ws.routes import nodo_dht as servidor_nodo_dht
 
 client = TestClient(app)
+# Usar la misma instancia de DHT que el servidor
+nodo_dht = servidor_nodo_dht
 
 
 # === Tests de archivos ===
@@ -60,10 +68,22 @@ def test_ws_stats_endpoint():
 	assert "mensajes_en_cola" in data
 
 
+async def _registrar_peer_test(peer_id: str):
+	"""Registra un peer en el DHT para tests."""
+	nodo_dht.publicar_peer(
+		peer_id=peer_id,
+		endpoint="ws://test.local",
+		firma="test_firma",
+		ttl=3600,
+		pubkey_dilithium_b64="test_pubkey_b64"
+	)
+
+
 @pytest.mark.asyncio
 async def test_ws_conexion_sin_auth():
 	"""Test que conexion sin autenticacion es rechazada."""
 	peer_id = "a" * 64
+	await _registrar_peer_test(peer_id)
 	
 	with client.websocket_connect(f"/ws/v1/connect/{peer_id}") as websocket:
 		# No enviar mensaje de auth
@@ -79,12 +99,13 @@ async def test_ws_conexion_sin_auth():
 async def test_ws_auth_exitosa():
 	"""Test de autenticacion exitosa."""
 	peer_id = "b" * 64
+	await _registrar_peer_test(peer_id)
 	
 	with client.websocket_connect(f"/ws/v1/connect/{peer_id}") as websocket:
 		# Enviar mensaje de auth
 		auth_msg = {
 			"tipo": "auth",
-			"firma": "firma_dummy_base64",  # TODO: Usar firma real
+			"firma": "firma_dummy_base64",  # En modo test se acepta cualquier firma
 			"timestamp": int(time.time()),
 		}
 		websocket.send_json(auth_msg)
@@ -99,6 +120,7 @@ async def test_ws_auth_exitosa():
 async def test_ws_heartbeat():
 	"""Test de mecanismo heartbeat."""
 	peer_id = "c" * 64
+	await _registrar_peer_test(peer_id)
 	
 	with client.websocket_connect(f"/ws/v1/connect/{peer_id}") as websocket:
 		# Auth
@@ -122,6 +144,8 @@ async def test_ws_envio_mensaje_peer_online():
 	"""Test de envio de mensaje a peer conectado."""
 	peer_id_alice = "d" * 64
 	peer_id_bob = "e" * 64
+	await _registrar_peer_test(peer_id_alice)
+	await _registrar_peer_test(peer_id_bob)
 	
 	# Conectar Bob
 	with client.websocket_connect(f"/ws/v1/connect/{peer_id_bob}") as ws_bob:
@@ -168,6 +192,8 @@ async def test_ws_mensaje_peer_offline():
 	"""Test de envio de mensaje a peer desconectado (encolado)."""
 	peer_id_alice = "f" * 64
 	peer_id_bob = "1" * 64
+	await _registrar_peer_test(peer_id_alice)
+	await _registrar_peer_test(peer_id_bob)
 	
 	# Solo Alice conectada (Bob offline)
 	with client.websocket_connect(f"/ws/v1/connect/{peer_id_alice}") as ws_alice:

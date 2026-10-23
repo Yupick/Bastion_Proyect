@@ -5,7 +5,21 @@ from pathlib import Path
 import json
 
 router = APIRouter()
+
+# Usar Jinja2Templates por defecto
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+# Cache simple para templates
+_templates_cache = {}
+
+def get_template_cached(name: str):
+    """Obtiene template con cache personalizado."""
+    if name not in _templates_cache:
+        _templates_cache[name] = templates.env.get_template(name)
+    return _templates_cache[name]
+
+# Monkey-patch get_template para usar cache personalizado
+templates.get_template = get_template_cached
 
 AUDIT_LOG_PATH = Path(__file__).parent.parent / "auditoria" / "eventos.jsonl"
 
@@ -18,11 +32,11 @@ COLOR_MAP = {
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse(request, "dashboard.html")
 
 @router.get("/dashboard/auditoria", response_class=HTMLResponse)
 def auditoria(request: Request):
-    return templates.TemplateResponse("auditoria.html", {"request": request})
+    return templates.TemplateResponse(request, "auditoria.html")
 
 @router.get("/v1/admin/audit/reciente", response_class=HTMLResponse)
 def audit_reciente(request: Request):
@@ -40,4 +54,4 @@ def audit_reciente(request: Request):
                     })
                 except Exception:
                     continue
-    return templates.TemplateResponse("audit_log.html", {"request": request, "eventos": eventos})
+    return templates.TemplateResponse(request, "audit_log.html", {"eventos": eventos})

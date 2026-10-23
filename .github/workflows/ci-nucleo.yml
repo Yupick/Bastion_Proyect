@@ -51,7 +51,7 @@ jobs:
 
   test-nucleo-oqs:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,30 +72,32 @@ jobs:
       - name: Instalar prerequisitos del sistema para liboqs
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake libssl-dev pkg-config ninja-build libffi-dev
+          sudo apt-get install -y build-essential cmake libssl-dev pkg-config ninja-build libffi-dev git
 
-      - name: Verificar si oqs funcional esta disponible
+      - name: Compilar e instalar liboqs desde fuente
         run: |
-          if python -c "import oqs; assert hasattr(oqs, 'KeyEncapsulation')" >/dev/null 2>&1; then
-            echo "OQS_FUNCTIONAL=true" >> "$GITHUB_ENV"
-          else
-            echo "OQS_FUNCTIONAL=false" >> "$GITHUB_ENV"
-            echo "oqs no disponible o version incompatible. Se omite suite requires_oqs sin fallar pipeline."
-          fi
+          git clone --depth 1 --branch main https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs
+          cd /tmp/liboqs
+          mkdir build && cd build
+          cmake -GNinja -DOQS_BUILD_ONLY_LIB=OFF -DCMAKE_INSTALL_PREFIX=/usr/local ..
+          ninja
+          sudo ninja install
+          sudo ldconfig
+
+      - name: Instalar binding Python oqs
+        run: |
+          pip install oqs
+
+      - name: Verificar instalacion oqs
+        run: |
+          python -c "import oqs; print('oqs version:', oqs.__version__); print('KeyEncapsulation:', hasattr(oqs, 'KeyEncapsulation')); print('Signature:', hasattr(oqs, 'Signature'))"
 
       - name: Crear carpeta de artefactos
         run: mkdir -p artifacts/test-results
 
-      - name: Ejecutar tests requires_oqs si la libreria es funcional
-        if: env.OQS_FUNCTIONAL == 'true'
+      - name: Ejecutar tests requires_oqs
         run: |
-          echo "oqs funcional detectado. Ejecutando tests requires_oqs."
           pytest qrypta/nucleo_crypto/tests -q -m "requires_oqs" --maxfail=1 --junitxml=artifacts/test-results/nucleo-oqs.xml
-
-      - name: Generar XML vacio si oqs no funcional
-        if: env.OQS_FUNCTIONAL != 'true'
-        run: |
-          printf '<testsuite name="nucleo-oqs" tests="0" failures="0" skipped="0"></testsuite>\n' > artifacts/test-results/nucleo-oqs.xml
 
       - name: Publicar resultados de tests oqs
         if: always()

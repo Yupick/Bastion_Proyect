@@ -52,7 +52,7 @@ async def enviar_push(req: EnviarPushRequest):
         raise HTTPException(status_code=404, detail="Token no registrado")
 
     payload = construir_payload_aviso(peer_id=req.peer_id, tipo_aviso=req.tipo_aviso)
-    ok = enviar_a_proveedor(token_push=token, payload=payload)
+    ok = await enviar_a_proveedor(token_push=token, payload=payload)
     if not ok:
         raise HTTPException(status_code=502, detail="Error al enviar push")
 
