@@ -1,17 +1,24 @@
-# qrypta_cliente_flutter
+# Qrypta
 
-A new Flutter project.
+Sistema de mensajeria hibrido poscuantico con privacidad radical y auditoria verificable.
 
-## Getting Started
+## Estructura
+- servidor/: API FastAPI, TUI y dashboard
+- servidor/dashboard_admin_web/: panel admin web (React + TypeScript)
+- servidor/admin_consola/: entrypoint de consola de administracion
+- nucleo_crypto/: primitivas y logica de seguridad
+- cliente_movil/: Flutter (Android/iOS)
+- cliente_web/: React + TypeScript
+- cliente_escritorio/: Tauri v2 (Windows/Linux)
 
-This project is a starting point for a Flutter application.
+## GitFlow
+- main: estable
+- develop: integracion
+- feature/*, release/*, hotfix/*
 
-A few resources to get you started if this is your first Flutter project:
+## Gate beta de clientes
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Para validar que los clientes estan listos para pruebas beta:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. Ejecutar `scripts/beta_clients_ready.sh` desde la raiz del repo.
+2. Revisar el resultado consolidado en `qrypta/docs/BETA_CLIENTS_READINESS.md`.
