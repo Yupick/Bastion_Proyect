@@ -51,7 +51,7 @@ class MensajeCifrado:
 	tag: bytes  # 16 bytes
 	firma_dilithium: bytes  # variable (~3293 bytes para ML-DSA-65)
 	
-	TAMANIO_FIRMA = 3293  # ML-DSA-65 signature size
+	TAMANIO_FIRMA = 3309  # ML-DSA-65 signature size
 	
 	def serializar(self) -> bytes:
 		"""Serializa el mensaje a bytes para transmision."""
