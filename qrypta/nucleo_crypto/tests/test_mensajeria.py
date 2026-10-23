@@ -158,8 +158,8 @@ def test_firma_invalida_rechazada():
 		privkey_dilithium_alice,
 	)
 	
-	# Bob intenta descifrar usando clave del impostor (firma no coincidira)
-	with pytest.raises(ErrorVerificacion, match="Firma del mensaje invalida"):
+	# Bob intenta descifrar usando clave del impostor (peer_id no coincide primero)
+	with pytest.raises(ErrorMensaje, match="El mensaje no viene del contacto esperado"):
 		descifrar_de_contacto(
 			mensaje,
 			contacto_impostor,  # Contacto incorrecto
