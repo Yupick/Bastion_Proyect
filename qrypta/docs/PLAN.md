@@ -208,3 +208,99 @@ Incluye en todos:
 - Sin claves privadas en logs
 - Validacion estricta de entrada
 - Cumplimiento de ESTYLEGUIDE.md
+
+---
+
+## Plan de Sprints para Beta (Fase 14 → Sprints 1, 2, 9)
+
+_Fecha: 2026-05-25_
+
+### Objetivo
+Llegar a una beta cerrada con núcleo funcional, criptografía verificable, sincronización básica, push, grupos, y CI/CD reproducible.
+
+### Criterio de Beta
+La beta puede abrirse cuando se cumpla todo esto:
+- `qrypta/nucleo_crypto/tests` pasa en CI con `oqs` disponible.
+- El servidor arranca en local y en staging con scripts reproducibles.
+- Push, DHT, grupos y WebSockets tienen rutas funcionales y pruebas mínimas.
+- Al menos un cliente web y un cliente móvil compilan y ejecutan smoke tests.
+- Existe un flujo de release y rollback documentado.
+
+### Principios de ejecución
+- Cada sprint debe entregar algo verificable, no solo documentación.
+- Primero se estabiliza la base crítica: dependencias nativas, CI, staging y pruebas.
+- Después se completa el flujo de producto: push, grupos, sync y clientes.
+- Cada fase termina con una validación automática o manual clara.
+
+---
+
+### Sprint 1 - Entorno reproducible y CI (1 semana)
+**Objetivos:**
+- Hacer reproducible el entorno de desarrollo.
+- Hacer que CI instale `oqs` o un equivalente viable en Ubuntu.
+- Consolidar dependencias de desarrollo.
+
+**Entregables:**
+- `requirements-dev.txt` operativo.
+- `devcontainer` funcional.
+- Workflows de `ci-nucleo` y `ci-servidor` con instalación de dependencias nativas.
+- Documentación de desbloqueo de entorno actualizada.
+
+**Criterio de salida:**
+- `pytest qrypta/nucleo_crypto/tests -q` corre en CI o queda claramente segmentado por skips controlados.
+
+---
+
+### Sprint 2 - Staging y servidor base (1 semana)
+**Objetivos:**
+- Asegurar un servidor de staging reproducible.
+- Cerrar lo mínimo de REST, auditoría y colas.
+
+**Entregables:**
+- `Dockerfile` y `docker-compose` revisados para servidor.
+- Script de despliegue local/staging.
+- Endpoints REST base validados.
+- Logs y métricas mínimas accesibles.
+
+**Criterio de salida:**
+- El servidor arranca con un solo comando en local y en staging.
+
+---
+
+### Sprint 9 - Hardening y release (1 semana)
+**Objetivos:**
+- Reducir riesgos antes de abrir beta cerrada.
+- Estabilizar documentación, release y rollback.
+
+**Entregables:**
+- Checklist final de beta.
+- Tag de release candidato.
+- Instrucciones de despliegue, rollback y soporte.
+- Registro de bugs conocidos y límites del beta.
+
+**Criterio de salida:**
+- Se puede entregar una beta cerrada con comportamiento predecible y plan de soporte.
+
+---
+
+### Mapa Fase 14 → Sprints
+| Fase Maestro | Sprint Beta |
+|--------------|-------------|
+| Fase 14 (CI/CD completo) | Sprint 1 (CI), Sprint 2 (Staging), Sprint 9 (Release) |
+
+---
+
+### Riesgos principales
+- `oqs` puede requerir dependencias nativas no disponibles por defecto.
+- Flutter y Tauri dependen de toolchains externas que no están listas en cualquier máquina.
+- FCM/APNs pueden requerir secretos y configuración externa antes de validar push real.
+- El alcance de beta debe limitarse: no intentar cerrar todo el roadmap completo antes de liberar.
+
+---
+
+### Orden recomendado para Beta mínima
+1. **Sprint 1 y 2** → Estabilizar base (CI, oqs, staging, Docker)
+2. **Sprint 9** → Hardening, checklist, tag release, rollback docs
+3. Validar: CI verde + staging up + smoke tests clientes + release flow
+
+> **Nota**: Sprints 3-8 (seguridad, sync, push, grupos, DHT, clientes) corresponden a Fases 9-13 ya implementadas o en progreso. El foco de Fase 14 es cerrar la cadena de entrega.

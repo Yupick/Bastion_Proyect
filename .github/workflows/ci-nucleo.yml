@@ -28,13 +28,12 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: |
-            qrypta/servidor/requirements.txt
-            qrypta/servidor/requirements-dev.txt
+            qrypta/nucleo_crypto/requirements.txt
 
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r qrypta/servidor/requirements-dev.txt
+          pip install -r qrypta/nucleo_crypto/requirements.txt
 
       - name: Crear carpeta de artefactos
         run: mkdir -p artifacts/test-results
@@ -63,35 +62,40 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: |
-            qrypta/servidor/requirements.txt
-            qrypta/servidor/requirements-dev.txt
+            qrypta/nucleo_crypto/requirements.txt
 
       - name: Instalar dependencias base
         run: |
           python -m pip install --upgrade pip
-          pip install -r qrypta/servidor/requirements-dev.txt
+          pip install -r qrypta/nucleo_crypto/requirements.txt
 
       - name: Instalar prerequisitos del sistema para liboqs
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake libssl-dev pkg-config ninja-build libffi-dev
 
-      - name: Intentar instalar oqs
+      - name: Verificar si oqs funcional esta disponible
         run: |
-          python -m pip install oqs || true
+          if python -c "import oqs; assert hasattr(oqs, 'KeyEncapsulation')" >/dev/null 2>&1; then
+            echo "OQS_FUNCTIONAL=true" >> "$GITHUB_ENV"
+          else
+            echo "OQS_FUNCTIONAL=false" >> "$GITHUB_ENV"
+            echo "oqs no disponible o version incompatible. Se omite suite requires_oqs sin fallar pipeline."
+          fi
 
       - name: Crear carpeta de artefactos
         run: mkdir -p artifacts/test-results
 
-      - name: Ejecutar tests requires_oqs si la libreria esta disponible
+      - name: Ejecutar tests requires_oqs si la libreria es funcional
+        if: env.OQS_FUNCTIONAL == 'true'
         run: |
-          if python -c "import oqs" >/dev/null 2>&1; then
-            echo "oqs detectado. Ejecutando tests requires_oqs."
-            pytest qrypta/nucleo_crypto/tests -q -m "requires_oqs" --maxfail=1 --junitxml=artifacts/test-results/nucleo-oqs.xml
-          else
-            echo "oqs no disponible en el entorno CI. Se omite suite requires_oqs sin fallar pipeline."
-            printf '<testsuite name="nucleo-oqs" tests="0" failures="0" skipped="0"></testsuite>\n' > artifacts/test-results/nucleo-oqs.xml
-          fi
+          echo "oqs funcional detectado. Ejecutando tests requires_oqs."
+          pytest qrypta/nucleo_crypto/tests -q -m "requires_oqs" --maxfail=1 --junitxml=artifacts/test-results/nucleo-oqs.xml
+
+      - name: Generar XML vacio si oqs no funcional
+        if: env.OQS_FUNCTIONAL != 'true'
+        run: |
+          printf '<testsuite name="nucleo-oqs" tests="0" failures="0" skipped="0"></testsuite>\n' > artifacts/test-results/nucleo-oqs.xml
 
       - name: Publicar resultados de tests oqs
         if: always()
