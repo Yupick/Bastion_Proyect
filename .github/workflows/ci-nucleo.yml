@@ -84,9 +84,10 @@ jobs:
           sudo ninja install
           sudo ldconfig
 
-      - name: Instalar binding Python oqs
+      - name: Compilar e instalar binding Python oqs desde fuente
         run: |
-          pip install oqs
+          cd /tmp/liboqs/python
+          pip install -e .
 
       - name: Verificar instalacion oqs
         run: |
