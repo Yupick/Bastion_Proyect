@@ -1,0 +1,69 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag de release a publicar (formato vX.Y.Z)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.resolve.outputs.release_tag }}
+    steps:
+      - name: Resolver tag de release
+        id: resolve
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            release_tag="${{ inputs.tag_name }}"
+          else
+            release_tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "Tag invalido: $release_tag" >&2
+            exit 1
+          fi
+
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generar notas de release
+        run: |
+          previous_tag="$(git describe --tags --abbrev=0 "${{ needs.validate-tag.outputs.release_tag }}^" 2>/dev/null || true)"
+          if [[ -n "$previous_tag" ]]; then
+            notes="$(git log --oneline --no-decorate "${previous_tag}..${{ needs.validate-tag.outputs.release_tag }}")"
+          else
+            notes="$(git log --oneline --no-decorate --max-count=50)"
+          fi
+
+          printf '%s\n' "$notes" > release-notes.md
+
+      - name: Publicar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate-tag.outputs.release_tag }}
+          name: ${{ needs.validate-tag.outputs.release_tag }}
+          generate_release_notes: true
+          body_path: release-notes.md

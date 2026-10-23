@@ -2,13 +2,22 @@ name: ci-servidor
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, main]
   pull_request:
-    branches: [main]
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-servidor-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-servidor:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,22 +26,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install system deps for liboqs
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake libssl-dev pkg-config ninja-build libffi-dev
-
-      - name: Try install Python binding 'oqs'
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install oqs || echo "oqs install failed; tests that require it may fail"
+          cache: pip
+          cache-dependency-path: |
+            qrypta/servidor/requirements.txt
+            qrypta/servidor/requirements-dev.txt
 
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r qrypta/servidor/requirements.txt
+          pip install -r qrypta/servidor/requirements-dev.txt
+
+      - name: Crear carpeta de artefactos
+        run: mkdir -p artifacts/test-results
 
       - name: Ejecutar tests del servidor
         run: |
-          pytest qrypta/servidor/tests -q
+          pytest qrypta/servidor/tests -q --maxfail=1 --junitxml=artifacts/test-results/servidor.xml
+
+      - name: Publicar resultados de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-servidor
+          path: artifacts/test-results/servidor.xml
