@@ -245,5 +245,9 @@ docker build -t bastion-servidor -f qrypta/servidor/Dockerfile qrypta
 | `PLAN.md` | Roadmap maestro + Beta Sprint Plan |
 | `ARCHITECTURE.md` | Arquitectura, decisiones tech, políticas |
 | `BETA_READINESS_REPORT.md` | Estado actual para beta test |
+| `BETA_CHECKLIST.md` | Checklist final beta + criterios aceptación |
+| `BETA_TESTER_GUIDE.md` | Guía para testers beta (instalación, casos prueba, reporte) |
+| `KNOWN_ISSUES.md` | Bugs conocidos + límites beta |
+| `DEPLOYMENT_GUIDE.md` | Despliegue staging/prod, rollback, monitoring, soporte |
 | `ESTYLEGUIDE.md` | Guía estilo completa |
 | `archive/PLAN_FASE13_ADMIN.md` | Histórico detallado Fase 13 |

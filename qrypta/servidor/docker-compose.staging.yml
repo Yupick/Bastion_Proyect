@@ -1,0 +1,138 @@
+# Staging Deployment - Qrypta
+
+```yaml
+services:
+  servidor:
+    build:
+      context: ..
+      dockerfile: servidor/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qrypta
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: qrypta_mensajes
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qrypta -d qrypta_mensajes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+```
+
+## Despliegue en Staging
+
+### 1. Preparar entorno
+```bash
+# Clonar repo
+git clone https://github.com/Yupick/Bastion_Proyect.git
+cd Bastion_Proyect
+
+# Crear .env.staging con valores seguros
+cp qrypta/servidor/.env.example qrypta/servidor/.env.staging
+# Editar .env.staging con valores de producción:
+# - MODO_DEBUG=false
+# - ADMIN_TOKEN=<token-seguro-generado>
+# - CORS_ORIGINS=<dominio-staging>
+# - POSTGRES_PASSWORD=<password-seguro>
+```
+
+### 2. Desplegar
+```bash
+cd qrypta/servidor
+docker-compose -f docker-compose.staging.yml up -d --build
+
+# Verificar estado
+docker-compose -f docker-compose.staging.yml ps
+docker-compose -f docker-compose.staging.yml logs -f servidor
+```
+
+### 3. Verificar salud
+```bash
+curl -f http://localhost:8000/health
+curl -f http://localhost:8000/metrics
+```
+
+## Rollback
+
+```bash
+# Volver a versión anterior (tag previo)
+docker-compose -f docker-compose.staging.yml down
+git checkout <tag-anterior>
+docker-compose -f docker-compose.staging.yml up -d --build
+
+# O usar imagen Docker previa
+docker pull ghcr.io/yupick/bastion-proyect-servidor:<tag-anterior>
+# Actualizar docker-compose.staging.yml para usar la imagen en lugar de build
+docker-compose -f docker-compose.staging.yml up -d
+```
+
+## Variables de Entorno Staging (.env.staging)
+
+| Variable | Valor Ejemplo | Descripción |
+|----------|---------------|-------------|
+| HOST | 0.0.0.0 | Bind address |
+| PUERTO | 8000 | Puerto servidor |
+| MODO_DEBUG | false | **false en staging** |
+| TTL_MENSAJES_H | 24 | TTL mensajes pendientes |
+| MAX_MENSAJES_POR_PEER | 500 | Límite cola por peer |
+| RATE_LIMIT | 30/minute | Rate limiting |
+| LOG_DIR | qrypta/servidor/logs | Directorio logs |
+| ADMIN_TOKEN | <token-seguro-32-chars> | Token admin dashboard |
+| CORS_ORIGINS | https://staging.qrypta.app | Orígenes permitidos |
+| POSTGRES_PASSWORD | <password-seguro> | Password BD (en .env.staging) |
+
+## Monitoreo Básico
+
+```bash
+# Logs en vivo
+docker-compose -f docker-compose.staging.yml logs -f servidor
+
+# Métricas
+curl http://localhost:8000/metrics
+
+# Estado contenedores
+docker-compose -f docker-compose.staging.yml ps
+
+# Uso recursos
+docker stats
+```
+
+## Checklist Pre-Despliegue
+
+- [ ] `.env.staging` configurado con valores seguros (no defaults)
+- [ ] `ADMIN_TOKEN` generado aleatoriamente (32+ chars)
+- [ ] `POSTGRES_PASSWORD` seguro y distinto de dev
+- [ ] `CORS_ORIGINS` restringido a dominio staging
+- [ ] `MODO_DEBUG=false`
+- [ ] Imagen Docker construida y testeada localmente
+- [ ] Healthcheck responde OK
+- [ ] Métricas accesibles
+- [ ] Logs rotando correctamente (max-size 10m, max-file 3)
